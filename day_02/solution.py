@@ -19,12 +19,16 @@ def halt(*args):
 	raise Halt('Halt!')
 
 
-def run(prog):
+def run(prog, noun=None, verb=None):
 	opcodes = {
 			1: adder(prog),
 			2: multiplier(prog),
 			99: halt,
 			}
+	if noun is not None:
+		prog[1] = noun
+	if verb is not None:
+		prog[2] = verb
 	pc = 0
 	while True:
 		try:
@@ -49,7 +53,12 @@ assert run(p0) == 30 and p0 == [30, 1, 1, 4, 2, 5, 6, 0, 99]
 with open('input.txt') as f:
 	program = [int(x) for x in f.read().split(',')]
 
-program[1] = 12
-program[2] = 2
-print('Day 2, part 1:', run(program))
+print('Day 2, part 1:', run(program[:], 12, 2))
+
+goal = 19690720
+for (n, v) in ((x, y) for x in range(100) for y in range(100)):
+	x = run(program[:], n, v)
+	if x == goal:
+		print('Day 2, part 2:', 100 * n + v)
+		break
 
