@@ -3,12 +3,12 @@
 def trace_wire(wire):
 	x = 0
 	y = 0
-	path = set()
+	path = [(x, y)]
 	for (dx, dy), n in wire:
 		for _ in range(n):
 			x += dx
 			y += dy
-			path.add((x, y))
+			path.append((x, y))
 	return path
 
 
@@ -26,8 +26,14 @@ with open('input.txt') as f:
 				for part in line.split(','))
 			for line in f)
 
-crossing = wire_a & wire_b
-distances = sorted(sum(map(abs, pos)) for pos in crossing)
+crossing = set(wire_a[1:]) & set(wire_b[1:])
+distance = min(sum(map(abs, pos)) for pos in crossing)
 
-print('Day 3, part 1:', distances[0])
+print('Day 3, part 1:', distance)
+
+wire_length = min(
+		wire_a.index(x) + wire_b.index(x)
+		for x in crossing)
+
+print('Day 3, part 2:', wire_length)
 
