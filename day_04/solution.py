@@ -1,4 +1,6 @@
 
+from collections import Counter
+
 password_range = (254032, 789860)
 adjusted_range = (255555, 788999)
 
@@ -17,9 +19,11 @@ def double(seq):
 
 
 start, stop = adjusted_range
-matches = sum(
-		1 for s in map(str, range(start, stop + 1))
-		if non_decreasing(s) and double(s))
+matches = [
+		s for s in map(str, range(start, stop + 1))
+		if non_decreasing(s) and double(s)]
 
-print('Day 4, part 1:', matches)
+print('Day 4, part 1:', len(matches))
+
+print('Day 4, part 2:', sum(1 for s in matches if 2 in Counter(s).values()))
 
