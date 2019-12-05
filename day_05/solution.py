@@ -26,16 +26,31 @@ class Intcode:
 			self.fd1(a)
 		self.ip += 2
 
+	def jump(self, left, right, pred):
+		a, b = self.values(left, right)
+		if pred(a):
+			self.ip = b
+		else:
+			self.ip += 3
+
 	def __call__(self, program):
 		self.ip = 0
 		self.prog = program
 		add = lambda a, b: a + b
 		mul = lambda a, b: a * b
+		true = lambda x: x
+		false = lambda x: not x
+		lt = lambda a, b: a < b
+		eq = lambda a, b: a == b
 		opcodes = {
 				1: lambda m: self.binop(m % 10, m // 10, add),
 				2: lambda m: self.binop(m % 10, m // 10, mul),
 				3: lambda _: self.io(0, 1),
 				4: lambda m: self.io(1, m % 10),
+				5: lambda m: self.jump(m % 10, m // 10, true),
+				6: lambda m: self.jump(m % 10, m // 10, false),
+				7: lambda m: self.binop(m % 10, m // 10, lt),
+				8: lambda m: self.binop(m % 10, m // 10, eq),
 				}
 		while self.prog[self.ip] != 99:
 			try:
@@ -63,8 +78,11 @@ def puts(buf):
 
 
 result = []
-computer = Intcode(gets([1]), puts(result))
+computer = Intcode(gets([1, 5]), puts(result))
 
 computer(program[:])
 print('Day 5, part 1:', result[-1])
+
+computer(program[:])
+print('Day 5, part 2:', result[-1])
 
