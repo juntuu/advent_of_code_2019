@@ -1,15 +1,47 @@
 
+import asyncio
 from itertools import count
+from collections import namedtuple
+
+
+def a_fun(f, *args):
+	async def fun(*fargs):
+		return f(*args, *fargs)
+	return fun
+
+
+class IO(namedtuple('IO', ['get', 'put'])):
+	__slots__ = ()
+
+	def __new__(cls, get=None, put=None, *, prompt=('in', 'out')):
+		if get is None:
+			cin = count(1)
+			get = lambda: int(input(f'{prompt[0]} [{next(cin)}]> '))
+		if put is None:
+			cout = count(1)
+			put = lambda i: print(f'{prompt[1]} [{next(cout)}]> {i}')
+		return super().__new__(cls, a_fun(get), a_fun(put))
+
+
+def gets(seq):
+	seq = iter(seq)
+	return IO(get=lambda: next(seq))
+
+
+def puts(buf):
+	return IO(put=lambda i: buf.append(i))
 
 
 class Intcode:
 	default_id = count()
 
-	def __init__(self, name=None, fd0=None, fd1=None):
-		self.id = str(name or next(Intcode.default_id))
-		self.fd_count = (count(1), count(1))
-		self.fd0 = fd0 or (lambda: int(input(f'{self.id}: in [{next(self.fd_count[0])}]> ')))
-		self.fd1 = fd1 or (lambda x: print(f'{self.id} out[{next(self.fd_count[1])}]> {x}'))
+	def __init__(self, fd0=None, fd1=None, *, name=None):
+		self.id = name or f'C_{next(Intcode.default_id)}'
+		self.fd0 = fd0 or IO(prompt=(self.id + ' in', ''))
+		self.fd1 = fd1 or IO(prompt=('', self.id + ' out'))
+
+	def __call__(self, program):
+		return asyncio.run(self.task(program))
 
 	def values(self, *modes):
 		vs = []
@@ -20,27 +52,27 @@ class Intcode:
 			vs.append(v)
 		return vs
 
-	def binop(self, left, right, op):
+	async def binop(self, left, right, op):
 		a, b, c = self.values(left, right, 1)
 		self.prog[c] = op(a, b)
 		self.ip += 4
 
-	def io(self, fd, left):
+	async def io(self, fd, left):
 		a = self.values(left)[0]
 		if fd == 0:
-			self.prog[a] = self.fd0()
+			self.prog[a] = await self.fd0.get()
 		else:
-			self.fd1(a)
+			await self.fd1.put(a)
 		self.ip += 2
 
-	def jump(self, left, right, pred):
+	async def jump(self, left, right, pred):
 		a, b = self.values(left, right)
 		if pred(a):
 			self.ip = b
 		else:
 			self.ip += 3
 
-	def __call__(self, program):
+	async def task(self, program):
 		self.ip = 0
 		self.prog = program
 		add = lambda a, b: a + b
@@ -62,21 +94,11 @@ class Intcode:
 		while self.prog[self.ip] != 99:
 			try:
 				code = self.prog[self.ip]
-				opcodes[code % 100](code // 100)
+				await opcodes[code % 100](code // 100)
 			except KeyError as e:
 				print('bad opcode:', self.prog[self.ip])
 				raise e
 			except IndexError as e:
 				print('bad access')
 				raise e
-
-
-def gets(seq):
-	seq = iter(seq)
-	return lambda: next(seq)
-
-
-def puts(buf):
-	return lambda i: buf.append(i)
-
 
