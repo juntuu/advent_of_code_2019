@@ -12,12 +12,14 @@ least_zeros = min(counts, key=lambda c: c['0'])
 
 print('Day 8, part 1:', least_zeros['1'] * least_zeros['2'])
 
-print('Day 8, part 2:')
+s = 'KAUZA'
+char_w = WIDTH // len(s)
+print('Day 8, part 2:', s)
 
 layers = zip(*image)
 for _ in range(HEIGHT):
 	for i in range(WIDTH):
-		visible = ('#' if c == '1' else ' ' for c in next(layers) if c != '2')
+		visible = (s[i // char_w] if c == '1' else ' ' for c in next(layers) if c != '2')
 		print(next(visible, ' ') * 2, end='')
 	print()
 
