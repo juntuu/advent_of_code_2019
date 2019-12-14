@@ -30,3 +30,17 @@ inventory = {k: 0 for k in chemicals}
 ore = ore_for('FUEL', inventory)
 print('Day 14, part 1:', ore)
 
+T = 10 ** 12
+fuel = T // ore   # known lower bound from requirement for 1 fuel
+step = fuel // 4
+while step > 0:
+	while True:
+		fuel += step
+		inventory = {k: 0 for k in chemicals}
+		if ore_for('FUEL', inventory, fuel) > T:
+			fuel -= step
+			step //= 2
+			break
+
+print('Day 14, part 2:', fuel)
+
