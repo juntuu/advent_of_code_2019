@@ -51,6 +51,24 @@ def find(x0, y0, x, y, data):
 	return route
 
 
+async def fill(data, oxygen, draw=None):
+	new = [oxygen]
+	time = -1
+	while new:
+		time += 1
+		new, frontier = [], new
+		for pos in frontier:
+			for d in [1, 2, 3, 4]:
+				p = step(*pos, d)
+				if data.get(p) == 1:
+					new.append(p)
+					data[p] = 6
+		if draw:
+			draw(data)
+			await asyncio.sleep(0.01)
+	return time
+
+
 async def search(prog, x0=0, y0=0, draw=None):
 	io = (asyncio.Queue(), asyncio.Queue())
 	cpu = Intcode(*io)
@@ -62,11 +80,14 @@ async def search(prog, x0=0, y0=0, draw=None):
 	x, y = x0, y0
 	done = False
 	route = []
+	oxygen = None
 	while not done:
 		if draw:
 			draw({**data, **{p: 5 for p in route}, (x, y): 3, (x0, y0): 4})
 		while not tries[x, y]:
-			assert trail
+			if not trail:
+				done = True
+				break
 			d = rev(trail.pop())
 			await io[0].put(d)
 			await io[1].get()
@@ -78,19 +99,23 @@ async def search(prog, x0=0, y0=0, draw=None):
 			await io[0].put(d)
 			r = await io[1].get()
 			data[xi, yi] = r
-			if r == 2:
+			if r == 2 and not route:
 				route = find(x0, y0, xi, yi, data)
-				done = True
-				break
-			if r == 1:
+				oxygen = xi, yi
+				data[oxygen] = 6
+				if draw:
+					draw({**{p: 7 for p in data}, **{p: 5 for p in route}, oxygen: 6, (x0, y0): 3})
+					await asyncio.sleep(2)
+			if r != 0:
 				trail.append(d)
 				x, y = xi, yi
 				break
 	task.cancel()
+	time = await fill(data, oxygen, draw)
 	if draw:
-		draw({**data, **{p: 5 for p in route}, (x0, y0): 4})
+		draw(data)
 		await asyncio.sleep(1)
-	return len(route) - 1
+	return len(route) - 1, time
 
 
 def visual(prog):
@@ -100,7 +125,7 @@ def visual(prog):
 		curses.cbreak()
 		curses.curs_set(False)
 
-		def draw(data, cs='#.*@o+ '):
+		def draw(data, cs='#.*@o+O '):
 			for (x, y), tile in data.items():
 				if 0 <= x < curses.COLS and 0 <= y < curses.LINES:
 					scr.addch(y, x, cs[tile])
@@ -118,8 +143,9 @@ with open('input.txt') as f:
 	prog = [int(x) for x in f.read().strip().split(',')]
 
 if '-v' in sys.argv or '--verbose' in sys.argv:
-	moves = visual(prog)
+	moves, time = visual(prog)
 else:
-	moves = asyncio.run(search(prog))
+	moves, time = asyncio.run(search(prog))
 print('Day 15, part 1:', moves)
+print('Day 15, part 2:', time)
 
