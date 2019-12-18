@@ -80,27 +80,48 @@ def simplify(nodes, root):
 	return nodes
 
 
-def search(root, target, nodes):
-	q = [(0, root, frozenset())]
+def search_n(roots, target, nodes):
+	q = [(0, frozenset(roots), frozenset())]
 	seen = set()
 	while q:
-		d, i, ks = heappop(q)
+		d, ids, ks = heappop(q)
 		if ks == target:
 			return d
-		for w, e in nodes[i].edges:
-			if e.open or e.key or e.door in ks:
-				new_keys = ks
-				if e.key:
-					new_keys |= {e.key}
-				if (e.id, new_keys) not in seen:
-					seen.add((e.id, new_keys))
-					heappush(q, (d + w, e.id, new_keys))
+		for i in ids:
+			for w, e in nodes[i].edges:
+				if e.open or e.key or e.door in ks:
+					new_ids = ids - {i} | {e.id}
+					new_keys = ks
+					if e.key:
+						new_keys |= {e.key}
+					if (new_ids, new_keys) not in seen:
+						seen.add((new_ids, new_keys))
+						heappush(q, (d + w, new_ids, new_keys))
 
 
 nodes, root = read_file('input.txt' if len(sys.argv) < 2 else sys.argv[1])
 nodes = simplify(nodes, root)
 keys = {k.key for k in nodes if k.key}
 
-best = search(root.id, keys, nodes)
+best = search_n([root.id], keys, nodes)
 print('Day 18, part 1:', best)
+
+roots = []
+for _, e1 in root.edges:
+	for _, e2 in e1.edges:
+		if e2 == root or e2.id in roots:
+			continue
+		roots.append(e2.id)
+		for x in root.edges:
+			if x in e2.edges:
+				e2.edges.remove(x)
+	nodes[e1.id] = nodes[-1]
+	nodes[e1.id].id = e1.id
+	nodes.pop()
+nodes[root.id] = nodes[-1]
+nodes[root.id].id = root.id
+nodes.pop()
+
+best = search_n(roots, keys, nodes)
+print('Day 18, part 2:', best)
 
