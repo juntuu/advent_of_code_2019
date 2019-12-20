@@ -1,6 +1,7 @@
 
 import sys
 from heapq import heappush, heappop
+from collections import defaultdict
 
 
 class Node:
@@ -82,7 +83,8 @@ def simplify(nodes, root):
 
 def search_n(roots, target, nodes):
 	q = [(0, frozenset(roots), frozenset())]
-	seen = set()
+	big = float('inf')
+	seen = defaultdict(lambda: big)
 	while q:
 		d, ids, ks = heappop(q)
 		if ks == target:
@@ -94,8 +96,8 @@ def search_n(roots, target, nodes):
 					new_keys = ks
 					if e.key:
 						new_keys |= {e.key}
-					if (new_ids, new_keys) not in seen:
-						seen.add((new_ids, new_keys))
+					if d + w < seen[new_ids, new_keys]:
+						seen[new_ids, new_keys] = d + w
 						heappush(q, (d + w, new_ids, new_keys))
 
 
