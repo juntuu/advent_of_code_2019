@@ -14,7 +14,12 @@ class Node:
 		return True
 
 
-def add_portals(nodes, portals):
+def out(x, y, bounds):
+	x0, y0, x1, y1 = bounds
+	return x < x0 or x > x1 or y < y0 or y > y1
+
+
+def add_portals(nodes, portals, bounds):
 	aa = zz = None
 	ports = {}
 	while portals:
@@ -37,11 +42,12 @@ def add_portals(nodes, portals):
 			assert node
 			node.portal = port
 			if port in ports:
-				p = ports[port]
-				p.edges.append((1, node))
-				node.edges.append((1, p))
+				p, xp, yp = ports[port]
+				d = -1 if out(xp, yp, bounds) else 1
+				p.edges.append((1, d, node))
+				node.edges.append((1, -d, p))
 			else:
-				ports[port] = node
+				ports[port] = node, x, y
 			if port == 'AA':
 				aa = node
 			elif port == 'ZZ':
@@ -49,10 +55,17 @@ def add_portals(nodes, portals):
 	return aa, zz
 
 
-def scan_line(y, line, nodes, portals):
+def scan_line(y, line, nodes, portals, bounds):
 	last = None
 	for x, c in enumerate(line):
 		if c in '# ':
+			if c == '#':
+				if not bounds[0]:
+					bounds[0] = x
+				if not bounds[1]:
+					bounds[1] = y
+				bounds[2] = x
+				bounds[3] = y
 			last = None
 			continue
 		if c.isupper():
@@ -60,12 +73,12 @@ def scan_line(y, line, nodes, portals):
 			continue
 		node = Node()
 		if last:
-			node.edges.append((1, last))
-			last.edges.append((1, node))
+			node.edges.append((1, 0, last))
+			last.edges.append((1, 0, node))
 		up = nodes.get((x, y-1))
 		if up:
-			node.edges.append((1, up))
-			up.edges.append((1, node))
+			node.edges.append((1, 0, up))
+			up.edges.append((1, 0, node))
 		nodes[x, y] = node
 		last = node
 
@@ -73,10 +86,11 @@ def scan_line(y, line, nodes, portals):
 def read_file(name):
 	nodes = {}
 	portals = {}
+	bounds = [0, 0, 0, 0]
 	with open(name) as f:
 		for y, line in enumerate(f):
-			scan_line(y, line.rstrip(), nodes, portals)
-	aa, zz = add_portals(nodes, portals)
+			scan_line(y, line.rstrip(), nodes, portals, bounds)
+	aa, zz = add_portals(nodes, portals, bounds)
 	return nodes, aa, zz
 
 
@@ -87,17 +101,17 @@ def simplify(nodes):
 			if n.portal:
 				continue
 			if len(n.edges) == 1:
-				w, e = n.edges.pop()
-				e.edges.remove((w, n))
+				w, _, e = n.edges.pop()
+				e.edges.remove((w, 0, n))
 				some = True
 			elif len(n.edges) == 2:
-				wl, left = n.edges.pop()
-				wr, right = n.edges.pop()
+				wl, _, left = n.edges.pop()
+				wr, _, right = n.edges.pop()
 				w = wl + wr
-				left.edges.remove((wl, n))
-				left.edges.append((w, right))
-				right.edges.remove((wr, n))
-				right.edges.append((w, left))
+				left.edges.remove((wl, 0, n))
+				left.edges.append((w, 0, right))
+				right.edges.remove((wr, 0, n))
+				right.edges.append((w, 0, left))
 				some = True
 		if not some:
 			break
@@ -113,9 +127,25 @@ def search(root, target):
 		if n == target:
 			return d
 		seen.add(n)
-		for w, e in n.edges:
+		for w, _, e in n.edges:
 			if e not in seen:
 				heappush(q, (d + w, e))
+
+
+def search_rec(root, target):
+	q = [(0, 0, root)]
+	seen = set()
+	while q:
+		d, lvl, n = heappop(q)
+		if n == target and lvl == 0:
+			return d
+		seen.add((n, lvl))
+		for w, x, e in n.edges:
+			new_lvl = lvl + x
+			if new_lvl < 0:
+				continue
+			if (e, new_lvl) not in seen:
+				heappush(q, (d + w, new_lvl, e))
 
 
 nodes, root, target = read_file('input.txt' if len(sys.argv) < 2 else sys.argv[1])
@@ -123,4 +153,7 @@ nodes = simplify(nodes)
 
 best = search(root, target)
 print('Day 20, part 1:', best)
+
+best = search_rec(root, target)
+print('Day 20, part 2:', best)
 
