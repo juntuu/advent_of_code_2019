@@ -10,21 +10,43 @@ with open(name) as f:
 '''
 @ABCD
 #???#
+if no ? is hole, no need to jump
 
 Jump:
 (¬A v ¬B v ¬C) ^ D
 => ¬(A ^ B ^ C) ^ D
+
+@ABCDEFGHI
+#???##--#-
+next ^or^ after jumping
+
+Jump:
+¬(A ^ B ^ C) ^ D ^ (E v H)
 '''
 
-code = map(ord, '''\
+sources = '''\
 OR A J
 AND B J
 AND C J
 NOT J J
 AND D J
 WALK
-''')
+''', '''\
+OR A J
+AND B J
+AND C J
+NOT J J
+AND D J
+OR E T
+OR H T
+AND T J
+RUN
+'''
 
-io = IO(lambda: next(code), lambda x: x > 255 and print('Day 21, part 1:', x))
-Intcode(io, io)(prog)
+io = IO(lambda: next(code), lambda x: x > 255 and print(f'Day 21, part {part}:', x))
+cpu = Intcode(io, io)
+
+for part, source in zip([1, 2], sources):
+	code = map(ord, source)
+	cpu(prog)
 
