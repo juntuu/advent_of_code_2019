@@ -134,17 +134,18 @@ def search(root, target):
 
 def search_rec(root, target):
 	q = [(0, 0, root)]
-	seen = set()
+	big = float('inf')
+	seen = {}
 	while q:
 		d, lvl, n = heappop(q)
-		if n == target and lvl == 0:
+		if lvl == 0 and n == target:
 			return d
-		seen.add((n, lvl))
 		for w, x, e in n.edges:
 			new_lvl = lvl + x
 			if new_lvl < 0:
 				continue
-			if (e, new_lvl) not in seen:
+			if d + w < seen.get((e, new_lvl), big):
+				seen[e, new_lvl] = d + w
 				heappush(q, (d + w, new_lvl, e))
 
 
